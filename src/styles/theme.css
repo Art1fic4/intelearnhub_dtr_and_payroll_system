@@ -1,0 +1,252 @@
+:root {
+  --font-size: 16px;
+
+  /* Light Mode — Classic Black & Gold (Enhanced) */
+  --background: #FEFEFE;
+  --foreground: #0D0D0D;
+  --card: #FEFEFE;
+  --card-foreground: #0D0D0D;
+  --popover: #FEFEFE;
+  --popover-foreground: #0D0D0D;
+  
+  --primary: #BA9731;
+  --primary-foreground: #FEFEFE;
+  --primary-light: #F8F4E8;
+  
+  --secondary: #F7F6F2;
+  --secondary-foreground: #0D0D0D;
+  --muted: #F7F6F2;
+  --muted-foreground: #6B685C;
+  --accent: #DACE84;
+  --accent-foreground: #0D0D0D;
+  
+  --success: #1B5E20;
+  --success-foreground: #FEFEFE;
+  --info: #0F172A;
+  --info-foreground: #FEFEFE;
+  --warning: #D97706;
+  --warning-foreground: #FEFEFE;
+  --destructive: #dc2626;
+  --destructive-foreground: #FEFEFE;
+  
+  --border: #E8E6E1;
+  --border-gold: #D9CBA3;
+  
+  --input: transparent;
+  --input-background: #FEFEFE;
+  --switch-background: #E8E6E1;
+  
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: #BA9731;
+
+  /* Chart — gold family */
+  --chart-1: #BA9731;
+  --chart-2: #DACE84;
+  --chart-3: #907421;
+  --chart-4: #F2E8C6;
+  --chart-5: #0D0D0D;
+
+  --radius: 0.625rem;
+
+  /* Sidebar */
+  --sidebar: #F7F6F2;
+  --sidebar-foreground: #0D0D0D;
+  --sidebar-primary: #BA9731;
+  --sidebar-primary-foreground: #FEFEFE;
+  --sidebar-accent: #E8E6E1;
+  --sidebar-accent-foreground: #0D0D0D;
+  --sidebar-border: #E8E6E1;
+  --sidebar-ring: #BA9731;
+}
+
+.dark {
+  /* Dark Mode — Classic Black & Gold (Enhanced) */
+  --background: #0D0D0D;
+  --foreground: #FEFEFE;
+  --card: #181614;
+  --card-foreground: #FEFEFE;
+  --popover: #181614;
+  --popover-foreground: #FEFEFE;
+  
+  --primary: #BA9731;
+  --primary-foreground: #0D0D0D;
+  --primary-light: #2A2312;
+  
+  --secondary: #24221F;
+  --secondary-foreground: #FEFEFE;
+  --muted: #24221F;
+  --muted-foreground: #A19D94;
+  --accent: #36322E;
+  --accent-foreground: #DACE84;
+  
+  --success: #81C784;
+  --success-foreground: #0D0D0D;
+  --info: #90CAF9;
+  --info-foreground: #0D0D0D;
+  --warning: #FBBF24;
+  --warning-foreground: #0D0D0D;
+  --destructive: #ef4444;
+  --destructive-foreground: #FEFEFE;
+  
+  --border: #36322E;
+  --border-gold: #5C4B24;
+  
+  --input: transparent;
+  --input-background: #181614;
+  --switch-background: #36322E;
+  --ring: #BA9731;
+
+  /* Chart — gold family */
+  --chart-1: #BA9731;
+  --chart-2: #DACE84;
+  --chart-3: #907421;
+  --chart-4: #F2E8C6;
+  --chart-5: #36322E;
+
+  /* Sidebar */
+  --sidebar: #181614;
+  --sidebar-foreground: #FEFEFE;
+  --sidebar-primary: #BA9731;
+  --sidebar-primary-foreground: #0D0D0D;
+  --sidebar-accent: #24221F;
+  --sidebar-accent-foreground: #DACE84;
+  --sidebar-border: #36322E;
+  --sidebar-ring: #BA9731;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-light: var(--primary-light);
+  
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  
+  --color-border: var(--border);
+  --color-border-gold: var(--border-gold);
+  
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  /**
+  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
+  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
+  */
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  label {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+
+  @media print {
+    .print\:hidden {
+      display: none !important;
+    }
+    .print\:border-0 {
+      border: 0 !important;
+    }
+    body {
+      background: white !important;
+      color: black !important;
+    }
+    .bg-white { background-color: white !important; }
+    .text-black { color: black !important; }
+    .border-black { border-color: black !important; }
+  }
+}
