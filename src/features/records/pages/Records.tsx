@@ -32,6 +32,16 @@ export function Records() {
     }
   };
 
+  const handleFacultyTabClick = () => {
+    setActiveTab('faculty');
+    setExpandedRowId(null);
+  };
+
+  const handleStudentsTabClick = () => {
+    setActiveTab('students');
+    setExpandedRowId(null);
+  };
+
   const getSubjPopulation = (subjectId: string) => {
     return students.filter(s => s.subjects.includes(subjectId)).length;
   };
@@ -129,7 +139,7 @@ export function Records() {
 
       <div className="flex gap-4 mb-6 border-b border-border pb-2">
         <button
-          onClick={() => { setActiveTab('faculty'); setExpandedRowId(null); }}
+          onClick={handleFacultyTabClick}
           className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'faculty' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
@@ -137,7 +147,7 @@ export function Records() {
           Faculty Records
         </button>
         <button
-          onClick={() => { setActiveTab('students'); setExpandedRowId(null); }}
+          onClick={handleStudentsTabClick}
           className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'students' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '@/core/state/store';
-import { Calendar, ChevronDown, ChevronUp, Filter, Mail, MapPin, Phone, Plus, Search, X } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp, Edit2, Filter, Mail, MapPin, Phone, Plus, Search, X } from 'lucide-react';
 import { getCurrentPayrollPeriod, resolvePeriodLabel } from '@/core/utils/payrollPeriod';
 import type { UploadedAsset } from '@/core/contracts/models';
 
@@ -29,14 +29,16 @@ const toAsset = (doc: UploadDraft): UploadedAsset => ({
 });
 
 export function Students() {
-  const { students, subjects, attendance, addStudent } = useApp();
+  const { students, subjects, attendance, addStudent, updateStudent } = useApp();
   const currentPeriod = getCurrentPayrollPeriod();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGrade, setFilterGrade] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
   const [profilePicture, setProfilePicture] = useState<UploadDraft | null>(null);
+  const [submitError, setSubmitError] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -77,14 +79,13 @@ export function Students() {
     });
     setSelectedSubjectId('');
     setProfilePicture(null);
+    setEditingId(null);
   };
 
-  const submitCreate = (e: React.FormEvent) => {
+  const submitStudentForm = async (e: React.FormEvent) => {
     e.preventDefault();
-    const id = `ST-${Math.floor(10000 + Math.random() * 90000)}`;
-
-    addStudent({
-      id,
+    setSubmitError('');
+    const payload = {
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
@@ -93,10 +94,77 @@ export function Students() {
       subjects: formData.subjects,
       profilePicture: profilePicture ? toAsset(profilePicture) : undefined,
       documents: [],
-    });
+    };
 
+    try {
+      if (editingId) {
+        await updateStudent(editingId, payload);
+      } else {
+        const id = `ST-${Math.floor(10000 + Math.random() * 90000)}`;
+        await addStudent({
+          id,
+          ...payload,
+        });
+      }
+
+      setIsCreating(false);
+      resetForm();
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Unable to save student record.');
+    }
+  };
+
+  const handleCreateAccountClick = () => {
+    setIsCreating(true);
+  };
+
+  const handleCloseCreateForm = () => {
     setIsCreating(false);
     resetForm();
+  };
+
+  const handleAddSubjectClick = () => {
+    if (!selectedSubjectId || formData.subjects.includes(selectedSubjectId)) return;
+    setFormData((p) => ({ ...p, subjects: [...p.subjects, selectedSubjectId] }));
+    setSelectedSubjectId('');
+  };
+
+  const handleRemoveSubjectClick = (subjectId: string) => {
+    setFormData((p) => ({ ...p, subjects: p.subjects.filter((sub) => sub !== subjectId) }));
+  };
+
+  const handleToggleStudentDetails = (studentId: string) => {
+    setExpandedId((prev) => (prev === studentId ? null : studentId));
+  };
+
+  const handleEditStudentClick = (studentId: string) => {
+    const record = students.find((item) => item.id === studentId);
+    if (!record) return;
+
+    setFormData({
+      name: record.name,
+      email: record.email,
+      password: '',
+      phone: record.phone,
+      address: record.address,
+      gradeLevel: record.gradeLevel,
+      subjects: record.subjects,
+    });
+    setProfilePicture(
+      record.profilePicture
+        ? {
+            id: record.profilePicture.id,
+            label: record.profilePicture.label,
+            fileName: record.profilePicture.fileName,
+            mimeType: record.profilePicture.mimeType,
+            previewUrl: record.profilePicture.previewUrl,
+          }
+        : null
+    );
+    setSelectedSubjectId('');
+    setEditingId(record.id);
+    setIsCreating(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (isCreating) {
@@ -105,16 +173,17 @@ export function Students() {
     return (
       <div className="p-8 text-foreground bg-background h-full overflow-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Registration Form - STUDENT</h1>
-          <button onClick={() => { setIsCreating(false); resetForm(); }}><X className="w-5 h-5" /></button>
+          <h1 className="text-2xl font-bold">{editingId ? 'Edit Form - STUDENT' : 'Registration Form - STUDENT'}</h1>
+          <button onClick={handleCloseCreateForm}><X className="w-5 h-5" /></button>
         </div>
+        {submitError && <p className="mb-4 text-sm text-destructive">{submitError}</p>}
 
-        <form onSubmit={submitCreate} className="space-y-6 max-w-5xl">
+        <form onSubmit={submitStudentForm} className="space-y-6 max-w-5xl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 border border-border rounded-lg bg-card">
             <input required value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))} className="px-3 py-2 border border-border rounded bg-input-background" placeholder="Full name" />
             <input required type="email" value={formData.email} onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))} className="px-3 py-2 border border-border rounded bg-input-background" placeholder="Email" />
             <input required value={formData.phone} onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))} className="px-3 py-2 border border-border rounded bg-input-background" placeholder="Phone" />
-            <input required type="password" value={formData.password} onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))} className="px-3 py-2 border border-border rounded bg-input-background" placeholder="Password" />
+            <input required={!editingId} type="password" value={formData.password} onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))} className="px-3 py-2 border border-border rounded bg-input-background" placeholder={editingId ? 'Password (optional)' : 'Password'} />
             <input required value={formData.address} onChange={(e) => setFormData((p) => ({ ...p, address: e.target.value }))} className="px-3 py-2 border border-border rounded bg-input-background md:col-span-2" placeholder="Address" />
             <select required value={formData.gradeLevel} onChange={(e) => setFormData((p) => ({ ...p, gradeLevel: e.target.value, subjects: [] }))} className="px-3 py-2 border border-border rounded bg-input-background">
               <option value="">Select grade level</option>
@@ -130,18 +199,14 @@ export function Students() {
                 {availableSubjects.map((s) => <option key={s.id} value={s.id}>{s.code}</option>)}
               </select>
               <input readOnly value={selectedSubject?.name || ''} className="px-3 py-2 border border-border rounded bg-muted/40 md:col-span-2" placeholder="Description" />
-              <button type="button" onClick={() => {
-                if (!selectedSubjectId || formData.subjects.includes(selectedSubjectId)) return;
-                setFormData((p) => ({ ...p, subjects: [...p.subjects, selectedSubjectId] }));
-                setSelectedSubjectId('');
-              }} className="px-3 py-2 border border-primary/40 rounded text-primary">Add</button>
+              <button type="button" onClick={handleAddSubjectClick} className="px-3 py-2 border border-primary/40 rounded text-primary">Add</button>
             </div>
             <div className="flex flex-wrap gap-2">
               {formData.subjects.map((id) => {
                 const s = subjects.find((item) => item.id === id);
                 if (!s) return null;
                 return (
-                  <button key={id} type="button" onClick={() => setFormData((p) => ({ ...p, subjects: p.subjects.filter((sub) => sub !== id) }))} className="px-2 py-1 text-sm rounded border border-border bg-muted/30">
+                  <button key={id} type="button" onClick={() => handleRemoveSubjectClick(id)} className="px-2 py-1 text-sm rounded border border-border bg-muted/30">
                     {s.code} <span className="ml-1 text-muted-foreground">x</span>
                   </button>
                 );
@@ -177,8 +242,8 @@ export function Students() {
           </div>
 
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => { setIsCreating(false); resetForm(); }} className="px-4 py-2 border border-border rounded">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground rounded">Register Student</button>
+            <button type="button" onClick={handleCloseCreateForm} className="px-4 py-2 border border-border rounded">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground rounded">{editingId ? 'Update Student' : 'Register Student'}</button>
           </div>
         </form>
       </div>
@@ -192,7 +257,7 @@ export function Students() {
           <h1 className="text-3xl font-bold">Student Accounts</h1>
           <p className="text-muted-foreground mt-1">Dropdown details with visible/clickable profile image</p>
         </div>
-        <button onClick={() => setIsCreating(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg">
+        <button onClick={handleCreateAccountClick} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg">
           <Plus className="w-5 h-5" /> Create Account
         </button>
       </div>
@@ -223,7 +288,7 @@ export function Students() {
 
           return (
             <div key={student.id}>
-              <button onClick={() => setExpandedId(isExpanded ? null : student.id)} className="w-full p-4 text-left hover:bg-muted/40">
+              <button onClick={() => handleToggleStudentDetails(student.id)} className="w-full p-4 text-left hover:bg-muted/40">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold">{student.name}</p>
@@ -231,6 +296,18 @@ export function Students() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-sm">{student.subjects.length} subjects</span>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleEditStudentClick(student.id);
+                      }}
+                      className="text-primary hover:text-primary/80 transition-colors"
+                      aria-label={`Edit ${student.name}`}
+                      title="Edit student"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
                     {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </div>
                 </div>

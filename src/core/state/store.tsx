@@ -20,16 +20,16 @@ interface AppState {
   error: string | null;
   reload: () => Promise<void>;
   addFaculty: (faculty: Faculty) => Promise<void>;
-  updateFaculty: (id: string, faculty: Partial<Faculty>) => void;
-  deleteFaculty: (id: string) => void;
+  updateFaculty: (id: string, faculty: Partial<Faculty>) => Promise<void>;
+  deleteFaculty: (id: string) => Promise<void>;
   addStudent: (student: Student) => Promise<void>;
-  updateStudent: (id: string, student: Partial<Student>) => void;
-  deleteStudent: (id: string) => void;
+  updateStudent: (id: string, student: Partial<Student>) => Promise<void>;
+  deleteStudent: (id: string) => Promise<void>;
   addSubject: (subject: Subject) => Promise<void>;
   updateSubject: (id: string, subject: Partial<Subject>) => Promise<void>;
   deleteSubject: (id: string) => Promise<void>;
   addTimeLog: (log: TimeLog) => Promise<void>;
-  deleteTimeLog: (id: string) => void;
+  deleteTimeLog: (id: string) => Promise<void>;
   addAttendance: (record: AttendanceRecord) => Promise<void>;
 }
 
@@ -70,11 +70,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setFaculty((prev) => [...prev, created]);
   }, []);
 
-  const updateFaculty = useCallback((id: string, updates: Partial<Faculty>) => {
+  const updateFaculty = useCallback(async (id: string, updates: Partial<Faculty>) => {
+    await adminService.updateFaculty(id, updates);
     setFaculty((prev) => prev.map((item) => (item.id === id ? { ...item, ...updates } : item)));
   }, []);
 
-  const deleteFaculty = useCallback((id: string) => {
+  const deleteFaculty = useCallback(async (id: string) => {
+    await adminService.deleteFaculty(id);
     setFaculty((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
@@ -83,11 +85,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setStudents((prev) => [...prev, created]);
   }, []);
 
-  const updateStudent = useCallback((id: string, updates: Partial<Student>) => {
+  const updateStudent = useCallback(async (id: string, updates: Partial<Student>) => {
+    await adminService.updateStudent(id, updates);
     setStudents((prev) => prev.map((item) => (item.id === id ? { ...item, ...updates } : item)));
   }, []);
 
-  const deleteStudent = useCallback((id: string) => {
+  const deleteStudent = useCallback(async (id: string) => {
+    await adminService.deleteStudent(id);
     setStudents((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
@@ -97,8 +101,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateSubject = useCallback(async (id: string, updates: Partial<Subject>) => {
-    const updated = await adminService.updateSubject(id, updates);
-    setSubjects((prev) => prev.map((item) => (item.id === id ? updated : item)));
+    await adminService.updateSubject(id, updates);
+    setSubjects((prev) => prev.map((item) => (item.id === id ? { ...item, ...updates } : item)));
   }, []);
 
   const deleteSubject = useCallback(async (id: string) => {
@@ -118,7 +122,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setTimeLogs((prev) => [...prev, created]);
   }, []);
 
-  const deleteTimeLog = useCallback((id: string) => {
+  const deleteTimeLog = useCallback(async (id: string) => {
+    await adminService.deleteTimeLog(id);
     setTimeLogs((prev) => prev.filter((item) => item.id !== id));
   }, []);
 

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '@/core/state/store';
-import { ChevronDown, ChevronUp, Mail, MapPin, Phone, Plus, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Edit2, Mail, MapPin, Phone, Plus, Search, X } from 'lucide-react';
 import { getCurrentPayrollPeriod, resolvePeriodLabel } from '@/core/utils/payrollPeriod';
 import type { UploadedAsset } from '@/core/contracts/models';
 
@@ -20,12 +20,25 @@ const makeUploadDraft = (): UploadDraft => ({
   previewUrl: '',
 });
 
+function parseBankAccount(value?: string): { bankName: string; bankAccountNumber: string; bankAccountName: string } {
+  if (!value) return { bankName: '', bankAccountNumber: '', bankAccountName: '' };
+  const match = value.match(/^(.*) - (.*) \((.*)\)$/);
+  if (!match) return { bankName: value, bankAccountNumber: '', bankAccountName: '' };
+  return {
+    bankName: match[1]?.trim() ?? '',
+    bankAccountNumber: match[2]?.trim() ?? '',
+    bankAccountName: match[3]?.trim() ?? '',
+  };
+}
+
 export function Faculty() {
-  const { faculty, subjects, timeLogs, addFaculty } = useApp();
+  const { faculty, subjects, timeLogs, addFaculty, updateFaculty } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
+  const [submitError, setSubmitError] = useState('');
   const currentPeriod = getCurrentPayrollPeriod();
 
   const [formData, setFormData] = useState({
@@ -105,6 +118,7 @@ export function Faculty() {
     });
     setSelectedSubjectId('');
     setProfilePicture(null);
+    setEditingId(null);
   };
 
   const toAsset = (doc: UploadDraft): UploadedAsset => ({
@@ -115,15 +129,13 @@ export function Faculty() {
     previewUrl: doc.previewUrl,
   });
 
-  const submitCreate = (e: React.FormEvent) => {
+  const submitFacultyForm = async (e: React.FormEvent) => {
     e.preventDefault();
-    const id = `FA-${Math.floor(1000 + Math.random() * 9000)}`;
+    setSubmitError('');
     const documents = formData.documents
       .filter((doc) => doc.fileName && doc.previewUrl)
       .map(toAsset);
-
-    addFaculty({
-      id,
+    const payload = {
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
@@ -137,10 +149,76 @@ export function Faculty() {
       hasDiploma: documents.some((d) => d.label.toLowerCase().includes('diploma')),
       profilePicture: profilePicture ? toAsset(profilePicture) : undefined,
       documents,
-    });
+    };
 
+    try {
+      if (editingId) {
+        await updateFaculty(editingId, payload);
+      } else {
+        const id = `FA-${Math.floor(1000 + Math.random() * 9000)}`;
+        await addFaculty({ id, ...payload });
+      }
+
+      setIsCreating(false);
+      resetForm();
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Unable to save faculty record.');
+    }
+  };
+
+  const handleCreateAccountClick = () => {
+    setIsCreating(true);
+  };
+
+  const handleCloseCreateForm = () => {
     setIsCreating(false);
     resetForm();
+  };
+
+  const handleToggleFacultyDetails = (facultyId: string) => {
+    setExpandedId((prev) => (prev === facultyId ? null : facultyId));
+  };
+
+  const handleEditFacultyClick = (facultyId: string) => {
+    const record = faculty.find((item) => item.id === facultyId);
+    if (!record) return;
+    const parsedBank = parseBankAccount(record.bankAccount);
+    setFormData({
+      name: record.name,
+      email: record.email,
+      password: '',
+      phone: record.phone,
+      address: record.address,
+      educationLevel: record.educationLevel,
+      hourlyRate: String(record.hourlyRate),
+      bankName: parsedBank.bankName,
+      bankAccountName: parsedBank.bankAccountName,
+      bankAccountNumber: parsedBank.bankAccountNumber,
+      subjects: record.subjects,
+      documents: record.documents && record.documents.length > 0
+        ? record.documents.map((doc) => ({
+            id: doc.id,
+            label: doc.label,
+            fileName: doc.fileName,
+            mimeType: doc.mimeType,
+            previewUrl: doc.previewUrl,
+          }))
+        : [makeUploadDraft()],
+    });
+    setProfilePicture(
+      record.profilePicture
+        ? {
+            id: record.profilePicture.id,
+            label: record.profilePicture.label,
+            fileName: record.profilePicture.fileName,
+            mimeType: record.profilePicture.mimeType,
+            previewUrl: record.profilePicture.previewUrl,
+          }
+        : null
+    );
+    setEditingId(record.id);
+    setIsCreating(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (isCreating) {
@@ -148,22 +226,23 @@ export function Faculty() {
     return (
       <div className="p-8 text-foreground bg-background h-full overflow-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Registration Form - FACULTY</h1>
-          <button onClick={() => { setIsCreating(false); resetForm(); }}><X className="w-5 h-5" /></button>
+          <h1 className="text-2xl font-bold">{editingId ? 'Edit Form - FACULTY' : 'Registration Form - FACULTY'}</h1>
+          <button onClick={handleCloseCreateForm}><X className="w-5 h-5" /></button>
         </div>
+        {submitError && <p className="mb-4 text-sm text-destructive">{submitError}</p>}
 
-        <form onSubmit={submitCreate} className="space-y-6 max-w-5xl">
+        <form onSubmit={submitFacultyForm} className="space-y-6 max-w-5xl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 border border-border rounded-lg bg-card">
             <input required value={formData.name} onChange={(e) => updateForm('name', e.target.value)} className="px-3 py-2 border border-border rounded bg-input-background" placeholder="Full name" />
             <input required type="email" value={formData.email} onChange={(e) => updateForm('email', e.target.value)} className="px-3 py-2 border border-border rounded bg-input-background" placeholder="Email" />
             <input required value={formData.phone} onChange={(e) => updateForm('phone', e.target.value)} className="px-3 py-2 border border-border rounded bg-input-background" placeholder="Phone" />
-            <input required type="password" value={formData.password} onChange={(e) => updateForm('password', e.target.value)} className="px-3 py-2 border border-border rounded bg-input-background" placeholder="Password" />
+            <input required={!editingId} type="password" value={formData.password} onChange={(e) => updateForm('password', e.target.value)} className="px-3 py-2 border border-border rounded bg-input-background" placeholder={editingId ? 'Password (optional)' : 'Password'} />
             <input required value={formData.address} onChange={(e) => updateForm('address', e.target.value)} className="px-3 py-2 border border-border rounded bg-input-background md:col-span-2" placeholder="Address" />
             <input required value={formData.educationLevel} onChange={(e) => updateForm('educationLevel', e.target.value)} className="px-3 py-2 border border-border rounded bg-input-background" placeholder="Education level" />
             <input required type="number" step="0.01" value={formData.hourlyRate} onChange={(e) => updateForm('hourlyRate', e.target.value)} className="px-3 py-2 border border-border rounded bg-input-background" placeholder="Hourly rate" />
             <input required value={formData.bankName} onChange={(e) => updateForm('bankName', e.target.value)} className="px-3 py-2 border border-border rounded bg-input-background" placeholder="Bank name" />
-            <input required value={formData.bankAccountName} onChange={(e) => updateForm('bankAccountName', e.target.value)} className="px-3 py-2 border border-border rounded bg-input-background" placeholder="Account name" />
-            <input required value={formData.bankAccountNumber} onChange={(e) => updateForm('bankAccountNumber', e.target.value)} className="px-3 py-2 border border-border rounded bg-input-background" placeholder="Account number" />
+            <input required={!editingId} value={formData.bankAccountName} onChange={(e) => updateForm('bankAccountName', e.target.value)} className="px-3 py-2 border border-border rounded bg-input-background" placeholder="Account name" />
+            <input required={!editingId} value={formData.bankAccountNumber} onChange={(e) => updateForm('bankAccountNumber', e.target.value)} className="px-3 py-2 border border-border rounded bg-input-background" placeholder="Account number" />
           </div>
 
           <div className="p-5 border border-border rounded-lg bg-card space-y-3">
@@ -255,8 +334,8 @@ export function Faculty() {
           </div>
 
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => { setIsCreating(false); resetForm(); }} className="px-4 py-2 border border-border rounded">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground rounded">Register Faculty</button>
+            <button type="button" onClick={handleCloseCreateForm} className="px-4 py-2 border border-border rounded">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground rounded">{editingId ? 'Update Faculty' : 'Register Faculty'}</button>
           </div>
         </form>
       </div>
@@ -270,7 +349,7 @@ export function Faculty() {
           <h1 className="text-3xl font-bold">Faculty Accounts</h1>
           <p className="text-muted-foreground mt-1">Dropdown details with document visibility</p>
         </div>
-        <button onClick={() => setIsCreating(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg">
+        <button onClick={handleCreateAccountClick} className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg">
           <Plus className="w-5 h-5" /> Create Account
         </button>
       </div>
@@ -289,7 +368,7 @@ export function Faculty() {
 
           return (
             <div key={f.id}>
-              <button onClick={() => setExpandedId(isExpanded ? null : f.id)} className="w-full p-4 text-left hover:bg-muted/40">
+              <button onClick={() => handleToggleFacultyDetails(f.id)} className="w-full p-4 text-left hover:bg-muted/40">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold">{f.name}</p>
@@ -297,6 +376,18 @@ export function Faculty() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-sm">${f.hourlyRate}/hr</span>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleEditFacultyClick(f.id);
+                      }}
+                      className="text-primary hover:text-primary/80 transition-colors"
+                      aria-label={`Edit ${f.name}`}
+                      title="Edit faculty"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
                     {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </div>
                 </div>

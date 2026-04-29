@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { apiRequest } from '../api/apiClient';
+import { supabase } from '../api/supabaseClient';
 
 interface AuthUser {
   name: string;
@@ -35,17 +35,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const response = await apiRequest<{ accessToken: string; user: AuthUser }>('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
 
-    localStorage.setItem(ACCESS_TOKEN_KEY, response.accessToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(response.user));
-    setUser(response.user);
+    const accessToken = data.session?.access_token;
+    if (!accessToken) throw new Error('Supabase session token not found.');
+
+    const authUser: AuthUser = {
+      name: data.user?.email ?? 'Administrator',
+      role: 'admin',
+    };
+
+    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(authUser));
+    setUser(authUser);
   };
 
   const logout = () => {
+    void supabase.auth.signOut();
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     setUser(null);

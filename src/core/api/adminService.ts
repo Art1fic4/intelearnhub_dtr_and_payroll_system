@@ -1,4 +1,4 @@
-import { apiRequest } from './apiClient';
+import { supabase } from './supabaseClient';
 import type {
   AppBootstrapData,
   AttendanceRecord,
@@ -344,60 +344,444 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+type FacultyRow = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  education_level: string;
+  hourly_rate: number;
+  subjects: string[];
+  bank_account: string | null;
+  has_profile_pic: boolean;
+  has_tor: boolean;
+  has_diploma: boolean;
+  profile_picture: Faculty['profilePicture'] | null;
+  documents: Faculty['documents'] | null;
+};
+
+type StudentRow = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  grade_level: string;
+  subjects: string[];
+  profile_picture: Student['profilePicture'] | null;
+  documents: Student['documents'] | null;
+};
+
+type SubjectRow = {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  days: string[];
+  start_time: string;
+  end_time: string;
+  grade_level: string;
+  faculty_id: string | null;
+};
+
+type TimeLogRow = {
+  id: string;
+  date: string;
+  time: string;
+  faculty_id: string;
+  faculty_name: string;
+  subject: string;
+  grade: string;
+  hours: number;
+  hourly_rate: number;
+  is_overtime: boolean;
+  has_tor: boolean;
+  has_diploma: boolean;
+  period_start: string | null;
+  period_end: string | null;
+  period_label: string | null;
+};
+
+type AttendanceRow = {
+  id: string;
+  student_id: string;
+  student_name: string;
+  date: string;
+  time: string;
+  subject: string;
+  status: AttendanceRecord['status'];
+  period_start: string | null;
+  period_end: string | null;
+  period_label: string | null;
+};
+
+function ensureNoSupabaseError(error: { message: string } | null): void {
+  if (error) throw new Error(error.message);
+}
+
+function toFacultyModel(row: FacultyRow): Faculty {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    address: row.address,
+    educationLevel: row.education_level,
+    hourlyRate: row.hourly_rate,
+    subjects: row.subjects ?? [],
+    bankAccount: row.bank_account ?? undefined,
+    hasProfilePic: row.has_profile_pic,
+    hasTOR: row.has_tor,
+    hasDiploma: row.has_diploma,
+    profilePicture: row.profile_picture ?? undefined,
+    documents: row.documents ?? undefined,
+  };
+}
+
+function toStudentModel(row: StudentRow): Student {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    address: row.address,
+    gradeLevel: row.grade_level,
+    subjects: row.subjects ?? [],
+    profilePicture: row.profile_picture ?? undefined,
+    documents: row.documents ?? undefined,
+  };
+}
+
+function toSubjectModel(row: SubjectRow): Subject {
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    description: row.description,
+    days: row.days ?? [],
+    startTime: row.start_time,
+    endTime: row.end_time,
+    gradeLevel: row.grade_level,
+    facultyId: row.faculty_id ?? '',
+  };
+}
+
+function toTimeLogModel(row: TimeLogRow): TimeLog {
+  return {
+    id: row.id,
+    date: row.date,
+    time: row.time,
+    facultyId: row.faculty_id,
+    facultyName: row.faculty_name,
+    subject: row.subject,
+    grade: row.grade,
+    hours: row.hours,
+    hourlyRate: row.hourly_rate,
+    isOvertime: row.is_overtime,
+    hasTOR: row.has_tor,
+    hasDiploma: row.has_diploma,
+    periodStart: row.period_start ?? undefined,
+    periodEnd: row.period_end ?? undefined,
+    periodLabel: row.period_label ?? undefined,
+  };
+}
+
+function toAttendanceModel(row: AttendanceRow): AttendanceRecord {
+  return {
+    id: row.id,
+    studentId: row.student_id,
+    studentName: row.student_name,
+    date: row.date,
+    time: row.time,
+    subject: row.subject,
+    status: row.status,
+    periodStart: row.period_start ?? undefined,
+    periodEnd: row.period_end ?? undefined,
+    periodLabel: row.period_label ?? undefined,
+  };
+}
+
 export const adminService = {
   async getBootstrapData(): Promise<AppBootstrapData> {
     if (USE_MOCKS) return clone(mockDb);
-    return apiRequest<AppBootstrapData>('/api/admin/bootstrap');
+    const [facultyRes, studentsRes, subjectsRes, timeLogsRes, attendanceRes] = await Promise.all([
+      supabase.from('faculty').select('*').order('id'),
+      supabase.from('students').select('*').order('id'),
+      supabase.from('subjects').select('*').order('id'),
+      supabase.from('time_logs').select('*').order('date', { ascending: false }),
+      supabase.from('attendance_records').select('*').order('date', { ascending: false }),
+    ]);
+
+    ensureNoSupabaseError(facultyRes.error);
+    ensureNoSupabaseError(studentsRes.error);
+    ensureNoSupabaseError(subjectsRes.error);
+    ensureNoSupabaseError(timeLogsRes.error);
+    ensureNoSupabaseError(attendanceRes.error);
+
+    return {
+      faculty: (facultyRes.data as FacultyRow[]).map(toFacultyModel),
+      students: (studentsRes.data as StudentRow[]).map(toStudentModel),
+      subjects: (subjectsRes.data as SubjectRow[]).map(toSubjectModel),
+      timeLogs: (timeLogsRes.data as TimeLogRow[]).map(toTimeLogModel),
+      attendance: (attendanceRes.data as AttendanceRow[]).map(toAttendanceModel),
+    };
   },
   async createFaculty(payload: CreateFacultyPayload): Promise<Faculty> {
     if (USE_MOCKS) {
       mockDb.faculty.push(payload);
       return clone(payload);
     }
-    return apiRequest<Faculty>('/api/faculty', { method: 'POST', body: JSON.stringify(payload) });
+    const { data, error } = await supabase
+      .from('faculty')
+      .insert([
+        {
+          id: payload.id,
+          name: payload.name,
+          email: payload.email,
+          phone: payload.phone,
+          address: payload.address,
+          education_level: payload.educationLevel,
+          hourly_rate: payload.hourlyRate,
+          subjects: payload.subjects,
+          bank_account: payload.bankAccount ?? null,
+          has_profile_pic: payload.hasProfilePic,
+          has_tor: payload.hasTOR,
+          has_diploma: payload.hasDiploma,
+          profile_picture: payload.profilePicture ?? null,
+          documents: payload.documents ?? null,
+        },
+      ])
+      .select()
+      .single();
+    ensureNoSupabaseError(error);
+    return toFacultyModel(data as FacultyRow);
+  },
+  async updateFaculty(id: string, payload: Partial<Faculty>): Promise<void> {
+    if (USE_MOCKS) {
+      const current = mockDb.faculty.find((item) => item.id === id);
+      if (!current) throw new Error('Faculty not found');
+      Object.assign(current, payload);
+      return;
+    }
+
+    const updatePayload: Record<string, unknown> = {};
+    if (payload.name !== undefined) updatePayload.name = payload.name;
+    if (payload.email !== undefined) updatePayload.email = payload.email;
+    if (payload.phone !== undefined) updatePayload.phone = payload.phone;
+    if (payload.address !== undefined) updatePayload.address = payload.address;
+    if (payload.educationLevel !== undefined) updatePayload.education_level = payload.educationLevel;
+    if (payload.hourlyRate !== undefined) updatePayload.hourly_rate = payload.hourlyRate;
+    if (payload.subjects !== undefined) updatePayload.subjects = payload.subjects;
+    if (payload.bankAccount !== undefined) updatePayload.bank_account = payload.bankAccount ?? null;
+    if (payload.hasProfilePic !== undefined) updatePayload.has_profile_pic = payload.hasProfilePic;
+    if (payload.hasTOR !== undefined) updatePayload.has_tor = payload.hasTOR;
+    if (payload.hasDiploma !== undefined) updatePayload.has_diploma = payload.hasDiploma;
+    if (payload.profilePicture !== undefined) updatePayload.profile_picture = payload.profilePicture ?? null;
+    if (payload.documents !== undefined) updatePayload.documents = payload.documents ?? null;
+
+    const { data, error } = await supabase
+      .from('faculty')
+      .update(updatePayload)
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
+    ensureNoSupabaseError(error);
+    if (!data) throw new Error(`Unable to update faculty ${id}. Check Supabase RLS update policy.`);
+  },
+  async deleteFaculty(id: string): Promise<void> {
+    if (USE_MOCKS) {
+      mockDb.faculty = mockDb.faculty.filter((item) => item.id !== id);
+      return;
+    }
+
+    const { error } = await supabase.from('faculty').delete().eq('id', id);
+    ensureNoSupabaseError(error);
   },
   async createStudent(payload: CreateStudentPayload): Promise<Student> {
     if (USE_MOCKS) {
       mockDb.students.push(payload);
       return clone(payload);
     }
-    return apiRequest<Student>('/api/students', { method: 'POST', body: JSON.stringify(payload) });
+    const { data, error } = await supabase
+      .from('students')
+      .insert([
+        {
+          id: payload.id,
+          name: payload.name,
+          email: payload.email,
+          phone: payload.phone,
+          address: payload.address,
+          grade_level: payload.gradeLevel,
+          subjects: payload.subjects,
+          profile_picture: payload.profilePicture ?? null,
+          documents: payload.documents ?? null,
+        },
+      ])
+      .select()
+      .single();
+    ensureNoSupabaseError(error);
+    return toStudentModel(data as StudentRow);
+  },
+  async updateStudent(id: string, payload: Partial<Student>): Promise<void> {
+    if (USE_MOCKS) {
+      const current = mockDb.students.find((item) => item.id === id);
+      if (!current) throw new Error('Student not found');
+      Object.assign(current, payload);
+      return;
+    }
+
+    const updatePayload: Record<string, unknown> = {};
+    if (payload.name !== undefined) updatePayload.name = payload.name;
+    if (payload.email !== undefined) updatePayload.email = payload.email;
+    if (payload.phone !== undefined) updatePayload.phone = payload.phone;
+    if (payload.address !== undefined) updatePayload.address = payload.address;
+    if (payload.gradeLevel !== undefined) updatePayload.grade_level = payload.gradeLevel;
+    if (payload.subjects !== undefined) updatePayload.subjects = payload.subjects;
+    if (payload.profilePicture !== undefined) updatePayload.profile_picture = payload.profilePicture ?? null;
+    if (payload.documents !== undefined) updatePayload.documents = payload.documents ?? null;
+
+    const { data, error } = await supabase
+      .from('students')
+      .update(updatePayload)
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
+    ensureNoSupabaseError(error);
+    if (!data) throw new Error(`Unable to update student ${id}. Check Supabase RLS update policy.`);
+  },
+  async deleteStudent(id: string): Promise<void> {
+    if (USE_MOCKS) {
+      mockDb.students = mockDb.students.filter((item) => item.id !== id);
+      return;
+    }
+
+    const { error } = await supabase.from('students').delete().eq('id', id);
+    ensureNoSupabaseError(error);
   },
   async createSubject(payload: CreateSubjectPayload): Promise<Subject> {
     if (USE_MOCKS) {
       mockDb.subjects.push(payload);
       return clone(payload);
     }
-    return apiRequest<Subject>('/api/subjects', { method: 'POST', body: JSON.stringify(payload) });
+    const { data, error } = await supabase
+      .from('subjects')
+      .insert([
+        {
+          id: payload.id,
+          code: payload.code,
+          name: payload.name,
+          description: payload.description,
+          days: payload.days,
+          start_time: payload.startTime,
+          end_time: payload.endTime,
+          grade_level: payload.gradeLevel,
+          faculty_id: payload.facultyId || null,
+        },
+      ])
+      .select()
+      .single();
+    ensureNoSupabaseError(error);
+    return toSubjectModel(data as SubjectRow);
   },
-  async updateSubject(id: string, payload: UpdateSubjectPayload): Promise<Subject> {
+  async updateSubject(id: string, payload: UpdateSubjectPayload): Promise<void> {
     if (USE_MOCKS) {
       const current = mockDb.subjects.find((item) => item.id === id);
       if (!current) throw new Error('Subject not found');
       Object.assign(current, payload);
-      return clone(current);
+      return;
     }
-    return apiRequest<Subject>(`/api/subjects/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+    const updatePayload: Record<string, unknown> = {};
+    if (payload.code !== undefined) updatePayload.code = payload.code;
+    if (payload.name !== undefined) updatePayload.name = payload.name;
+    if (payload.description !== undefined) updatePayload.description = payload.description;
+    if (payload.days !== undefined) updatePayload.days = payload.days;
+    if (payload.startTime !== undefined) updatePayload.start_time = payload.startTime;
+    if (payload.endTime !== undefined) updatePayload.end_time = payload.endTime;
+    if (payload.gradeLevel !== undefined) updatePayload.grade_level = payload.gradeLevel;
+    if (payload.facultyId !== undefined) updatePayload.faculty_id = payload.facultyId || null;
+
+    const { data, error } = await supabase
+      .from('subjects')
+      .update(updatePayload)
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
+    ensureNoSupabaseError(error);
+    if (!data) throw new Error(`Unable to update subject ${id}. Check Supabase RLS update policy.`);
   },
   async deleteSubject(id: string): Promise<void> {
     if (USE_MOCKS) {
       mockDb.subjects = mockDb.subjects.filter((item) => item.id !== id);
       return;
     }
-    await apiRequest<void>(`/api/subjects/${id}`, { method: 'DELETE' });
+    const { error } = await supabase.from('subjects').delete().eq('id', id);
+    ensureNoSupabaseError(error);
   },
   async addTimeLog(payload: TimeLog): Promise<TimeLog> {
     if (USE_MOCKS) {
       mockDb.timeLogs.push(payload);
       return clone(payload);
     }
-    return apiRequest<TimeLog>('/api/time-logs', { method: 'POST', body: JSON.stringify(payload) });
+    const { data, error } = await supabase
+      .from('time_logs')
+      .insert([
+        {
+          id: payload.id,
+          date: payload.date,
+          time: payload.time,
+          faculty_id: payload.facultyId,
+          faculty_name: payload.facultyName,
+          subject: payload.subject,
+          grade: payload.grade,
+          hours: payload.hours,
+          hourly_rate: payload.hourlyRate,
+          is_overtime: payload.isOvertime,
+          has_tor: payload.hasTOR,
+          has_diploma: payload.hasDiploma,
+          period_start: payload.periodStart ?? null,
+          period_end: payload.periodEnd ?? null,
+          period_label: payload.periodLabel ?? null,
+        },
+      ])
+      .select()
+      .single();
+    ensureNoSupabaseError(error);
+    return toTimeLogModel(data as TimeLogRow);
+  },
+  async deleteTimeLog(id: string): Promise<void> {
+    if (USE_MOCKS) {
+      mockDb.timeLogs = mockDb.timeLogs.filter((item) => item.id !== id);
+      return;
+    }
+
+    const { error } = await supabase.from('time_logs').delete().eq('id', id);
+    ensureNoSupabaseError(error);
   },
   async addAttendance(payload: AttendanceRecord): Promise<AttendanceRecord> {
     if (USE_MOCKS) {
       mockDb.attendance.push(payload);
       return clone(payload);
     }
-    return apiRequest<AttendanceRecord>('/api/attendance', { method: 'POST', body: JSON.stringify(payload) });
+    const { data, error } = await supabase
+      .from('attendance_records')
+      .insert([
+        {
+          id: payload.id,
+          student_id: payload.studentId,
+          student_name: payload.studentName,
+          date: payload.date,
+          time: payload.time,
+          subject: payload.subject,
+          status: payload.status,
+          period_start: payload.periodStart ?? null,
+          period_end: payload.periodEnd ?? null,
+          period_label: payload.periodLabel ?? null,
+        },
+      ])
+      .select()
+      .single();
+    ensureNoSupabaseError(error);
+    return toAttendanceModel(data as AttendanceRow);
   },
 };

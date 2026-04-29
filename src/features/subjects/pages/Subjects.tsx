@@ -7,6 +7,7 @@ export function Subjects() {
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filterGrade, setFilterGrade] = useState<string>('');
+  const [submitError, setSubmitError] = useState('');
   
   const [formData, setFormData] = useState({
     code: '',
@@ -20,36 +21,59 @@ export function Subjects() {
 
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
   const gradeLevels = ['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+  const timeOptions = Array.from({ length: 23 }, (_, index) => {
+    const totalMinutes = 7 * 60 + index * 30;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const value = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    const meridiem = hours >= 12 ? 'PM' : 'AM';
+    const displayHour = hours % 12 || 12;
+    const label = `${displayHour}:${String(minutes).padStart(2, '0')} ${meridiem}`;
+    return { value, label };
+  });
 
   const filteredSubjects = filterGrade 
     ? subjects.filter(s => s.gradeLevel === filterGrade)
     : subjects;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleCreateSubjectClick = () => {
+    setIsCreating(true);
+  };
+
+  const handleDeleteSubjectClick = async (subjectId: string) => {
+    await deleteSubject(subjectId);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError('');
 
-    if (editingId) {
-      updateSubject(editingId, { ...formData, facultyId: undefined }); // Keep it undefined or empty
-    } else {
-      const newSubject = {
-        id: formData.code,
-        ...formData,
-        facultyId: '', // Default empty if not used here
-      };
-      addSubject(newSubject);
+    try {
+      if (editingId) {
+        await updateSubject(editingId, { ...formData, facultyId: undefined }); // Keep it undefined or empty
+      } else {
+        const newSubject = {
+          id: formData.code,
+          ...formData,
+          facultyId: '', // Default empty if not used here
+        };
+        await addSubject(newSubject);
+      }
+
+      setIsCreating(false);
+      setEditingId(null);
+      setFormData({
+        code: '',
+        name: '',
+        description: '',
+        days: [],
+        startTime: '',
+        endTime: '',
+        gradeLevel: '',
+      });
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Unable to save subject record.');
     }
-
-    setIsCreating(false);
-    setEditingId(null);
-    setFormData({
-      code: '',
-      name: '',
-      description: '',
-      days: [],
-      startTime: '',
-      endTime: '',
-      gradeLevel: '',
-    });
   };
 
   const handleEdit = (subject: typeof subjects[0]) => {
@@ -71,6 +95,7 @@ export function Subjects() {
   const handleCancel = () => {
     setIsCreating(false);
     setEditingId(null);
+    setSubmitError('');
     setFormData({
       code: '',
       name: '',
@@ -95,12 +120,12 @@ export function Subjects() {
     <div className="p-8 text-foreground bg-background h-full overflow-auto">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Subjects & Curriculum</h1>
-          <p className="text-muted-foreground mt-1">Manage course library and curriculum</p>
+          <h1 className="text-3xl font-bold text-foreground">Subject</h1>
+          <p className="text-muted-foreground mt-1">Manage course library</p>
         </div>
         {!isCreating && (
           <button
-            onClick={() => setIsCreating(true)}
+            onClick={handleCreateSubjectClick}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors"
           >
             <Plus className="w-5 h-5" />
@@ -119,6 +144,7 @@ export function Subjects() {
               <X className="w-5 h-5" />
             </button>
           </div>
+          {submitError && <p className="px-6 pt-4 text-sm text-destructive">{submitError}</p>}
 
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -165,23 +191,35 @@ export function Subjects() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5">Start Time</label>
-                  <input
-                    type="time"
+                  <select
                     value={formData.startTime}
                     onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                     className="w-full px-3 py-2 border border-border bg-input-background rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
                     required
-                  />
+                  >
+                    <option value="">Select start time</option>
+                    {timeOptions.map((time) => (
+                      <option key={time.value} value={time.value}>
+                        {time.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5">End Time</label>
-                  <input
-                    type="time"
+                  <select
                     value={formData.endTime}
                     onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                     className="w-full px-3 py-2 border border-border bg-input-background rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
                     required
-                  />
+                  >
+                    <option value="">Select end time</option>
+                    {timeOptions.map((time) => (
+                      <option key={time.value} value={time.value}>
+                        {time.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -298,7 +336,7 @@ export function Subjects() {
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => deleteSubject(subject.id)}
+                        onClick={() => void handleDeleteSubjectClick(subject.id)}
                         className="text-destructive hover:text-destructive/80 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
