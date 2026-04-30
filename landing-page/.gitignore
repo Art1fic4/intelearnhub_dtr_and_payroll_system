@@ -1,0 +1,7 @@
+FRONTEND_ADMIN/node_modules/
+FRONTEND_ADMIN/node_modules/.vite/
+FRONTEND_ADMIN/dist/
+FRONTEND_ADMIN/.vite/
+FRONTEND_ADMIN/.cache/
+FRONTEND_ADMIN/.DS_Store
+FRONTEND_ADMIN/*.log
