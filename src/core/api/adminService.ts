@@ -252,6 +252,13 @@ const mockDb: AppBootstrapData = {
       id: 'TL-2026-0411-001',
       date: '2026-04-11',
       time: '09:05',
+      startTime: '09:00',
+      endTime: '11:00',
+      name: 'Dr. Sarah Martinez',
+      role: 'Faculty',
+      subjectCode: 'MATH-101',
+      subjectDescription: 'Algebra Fundamentals',
+      gradeLevel: 'Grade 10',
       facultyId: 'FA-1001',
       facultyName: 'Dr. Sarah Martinez',
       subject: 'MATH-101',
@@ -261,6 +268,7 @@ const mockDb: AppBootstrapData = {
       isOvertime: false,
       hasTOR: true,
       hasDiploma: true,
+      status: 'pending',
       periodStart: '2026-04-11',
       periodEnd: '2026-04-25',
       periodLabel: '2026-04-11_to_2026-04-25',
@@ -269,6 +277,13 @@ const mockDb: AppBootstrapData = {
       id: 'TL-2026-0415-002',
       date: '2026-04-15',
       time: '10:50',
+      startTime: '10:45',
+      endTime: '12:15',
+      name: 'Prof. Daniel Kim',
+      role: 'Faculty',
+      subjectCode: 'SCI-201',
+      subjectDescription: 'General Science',
+      gradeLevel: 'Grade 10',
       facultyId: 'FA-1002',
       facultyName: 'Prof. Daniel Kim',
       subject: 'SCI-201',
@@ -278,6 +293,7 @@ const mockDb: AppBootstrapData = {
       isOvertime: false,
       hasTOR: true,
       hasDiploma: true,
+      status: 'approved',
       periodStart: '2026-04-11',
       periodEnd: '2026-04-25',
       periodLabel: '2026-04-11_to_2026-04-25',
@@ -286,15 +302,23 @@ const mockDb: AppBootstrapData = {
       id: 'TL-2026-0422-003',
       date: '2026-04-22',
       time: '13:10',
+      startTime: '13:00',
+      endTime: '17:30',
+      name: 'Prof. Daniel Kim',
+      role: 'Faculty',
+      subjectCode: 'ENG-301',
+      subjectDescription: 'English Composition',
+      gradeLevel: 'Grade 11',
       facultyId: 'FA-1002',
       facultyName: 'Prof. Daniel Kim',
       subject: 'ENG-301',
       grade: 'Grade 11',
-      hours: 2.5,
+      hours: 4.5,
       hourlyRate: 68,
       isOvertime: true,
       hasTOR: true,
       hasDiploma: true,
+      status: 'pending',
       periodStart: '2026-04-11',
       periodEnd: '2026-04-25',
       periodLabel: '2026-04-11_to_2026-04-25',
@@ -389,6 +413,13 @@ type TimeLogRow = {
   id: string;
   date: string;
   time: string;
+  start_time: string | null;
+  end_time: string | null;
+  name: string | null;
+  role: TimeLog['role'] | null;
+  subject_code: string | null;
+  subject_description: string | null;
+  grade_level: string | null;
   faculty_id: string;
   faculty_name: string;
   subject: string;
@@ -398,6 +429,9 @@ type TimeLogRow = {
   is_overtime: boolean;
   has_tor: boolean;
   has_diploma: boolean;
+  status: TimeLog['status'] | null;
+  audit_note: string | null;
+  edited_by_admin: boolean | null;
   period_start: string | null;
   period_end: string | null;
   period_label: string | null;
@@ -468,19 +502,33 @@ function toSubjectModel(row: SubjectRow): Subject {
 }
 
 function toTimeLogModel(row: TimeLogRow): TimeLog {
+  const startTime = row.start_time ?? row.time;
+  const endTime = row.end_time ?? row.time;
+  const subjectCode = row.subject_code ?? row.subject;
+  const gradeLevel = row.grade_level ?? row.grade;
   return {
     id: row.id,
     date: row.date,
     time: row.time,
+    startTime,
+    endTime,
+    name: row.name ?? row.faculty_name,
+    role: row.role ?? 'Faculty',
+    subjectCode,
+    subjectDescription: row.subject_description ?? row.subject,
+    gradeLevel,
     facultyId: row.faculty_id,
     facultyName: row.faculty_name,
-    subject: row.subject,
-    grade: row.grade,
+    subject: subjectCode,
+    grade: gradeLevel,
     hours: row.hours,
     hourlyRate: row.hourly_rate,
     isOvertime: row.is_overtime,
     hasTOR: row.has_tor,
     hasDiploma: row.has_diploma,
+    status: row.status ?? 'pending',
+    auditNote: row.audit_note ?? undefined,
+    editedByAdmin: row.edited_by_admin ?? undefined,
     periodStart: row.period_start ?? undefined,
     periodEnd: row.period_end ?? undefined,
     periodLabel: row.period_label ?? undefined,
@@ -532,7 +580,7 @@ export const adminService = {
       mockDb.faculty.push(payload);
       return clone(payload);
     }
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('faculty')
       .insert([
         {
@@ -551,11 +599,9 @@ export const adminService = {
           profile_picture: payload.profilePicture ?? null,
           documents: payload.documents ?? null,
         },
-      ])
-      .select()
-      .single();
+      ]);
     ensureNoSupabaseError(error);
-    return toFacultyModel(data as FacultyRow);
+    return clone(payload);
   },
   async updateFaculty(id: string, payload: Partial<Faculty>): Promise<void> {
     if (USE_MOCKS) {
@@ -580,14 +626,13 @@ export const adminService = {
     if (payload.profilePicture !== undefined) updatePayload.profile_picture = payload.profilePicture ?? null;
     if (payload.documents !== undefined) updatePayload.documents = payload.documents ?? null;
 
-    const { data, error } = await supabase
+    if (Object.keys(updatePayload).length === 0) return;
+
+    const { error } = await supabase
       .from('faculty')
       .update(updatePayload)
-      .eq('id', id)
-      .select('id')
-      .maybeSingle();
+      .eq('id', id);
     ensureNoSupabaseError(error);
-    if (!data) throw new Error(`Unable to update faculty ${id}. Check Supabase RLS update policy.`);
   },
   async deleteFaculty(id: string): Promise<void> {
     if (USE_MOCKS) {
@@ -603,7 +648,7 @@ export const adminService = {
       mockDb.students.push(payload);
       return clone(payload);
     }
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('students')
       .insert([
         {
@@ -617,11 +662,9 @@ export const adminService = {
           profile_picture: payload.profilePicture ?? null,
           documents: payload.documents ?? null,
         },
-      ])
-      .select()
-      .single();
+      ]);
     ensureNoSupabaseError(error);
-    return toStudentModel(data as StudentRow);
+    return clone(payload);
   },
   async updateStudent(id: string, payload: Partial<Student>): Promise<void> {
     if (USE_MOCKS) {
@@ -641,14 +684,13 @@ export const adminService = {
     if (payload.profilePicture !== undefined) updatePayload.profile_picture = payload.profilePicture ?? null;
     if (payload.documents !== undefined) updatePayload.documents = payload.documents ?? null;
 
-    const { data, error } = await supabase
+    if (Object.keys(updatePayload).length === 0) return;
+
+    const { error } = await supabase
       .from('students')
       .update(updatePayload)
-      .eq('id', id)
-      .select('id')
-      .maybeSingle();
+      .eq('id', id);
     ensureNoSupabaseError(error);
-    if (!data) throw new Error(`Unable to update student ${id}. Check Supabase RLS update policy.`);
   },
   async deleteStudent(id: string): Promise<void> {
     if (USE_MOCKS) {
@@ -664,7 +706,7 @@ export const adminService = {
       mockDb.subjects.push(payload);
       return clone(payload);
     }
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('subjects')
       .insert([
         {
@@ -678,11 +720,9 @@ export const adminService = {
           grade_level: payload.gradeLevel,
           faculty_id: payload.facultyId || null,
         },
-      ])
-      .select()
-      .single();
+      ]);
     ensureNoSupabaseError(error);
-    return toSubjectModel(data as SubjectRow);
+    return clone(payload);
   },
   async updateSubject(id: string, payload: UpdateSubjectPayload): Promise<void> {
     if (USE_MOCKS) {
@@ -701,14 +741,13 @@ export const adminService = {
     if (payload.gradeLevel !== undefined) updatePayload.grade_level = payload.gradeLevel;
     if (payload.facultyId !== undefined) updatePayload.faculty_id = payload.facultyId || null;
 
-    const { data, error } = await supabase
+    if (Object.keys(updatePayload).length === 0) return;
+
+    const { error } = await supabase
       .from('subjects')
       .update(updatePayload)
-      .eq('id', id)
-      .select('id')
-      .maybeSingle();
+      .eq('id', id);
     ensureNoSupabaseError(error);
-    if (!data) throw new Error(`Unable to update subject ${id}. Check Supabase RLS update policy.`);
   },
   async deleteSubject(id: string): Promise<void> {
     if (USE_MOCKS) {
@@ -730,6 +769,13 @@ export const adminService = {
           id: payload.id,
           date: payload.date,
           time: payload.time,
+          start_time: payload.startTime,
+          end_time: payload.endTime,
+          name: payload.name,
+          role: payload.role,
+          subject_code: payload.subjectCode,
+          subject_description: payload.subjectDescription,
+          grade_level: payload.gradeLevel,
           faculty_id: payload.facultyId,
           faculty_name: payload.facultyName,
           subject: payload.subject,
@@ -739,6 +785,9 @@ export const adminService = {
           is_overtime: payload.isOvertime,
           has_tor: payload.hasTOR,
           has_diploma: payload.hasDiploma,
+          status: payload.status,
+          audit_note: payload.auditNote ?? null,
+          edited_by_admin: payload.editedByAdmin ?? false,
           period_start: payload.periodStart ?? null,
           period_end: payload.periodEnd ?? null,
           period_label: payload.periodLabel ?? null,
@@ -756,6 +805,43 @@ export const adminService = {
     }
 
     const { error } = await supabase.from('time_logs').delete().eq('id', id);
+    ensureNoSupabaseError(error);
+  },
+  async updateTimeLog(
+    id: string,
+    payload: Partial<Pick<TimeLog, 'startTime' | 'endTime' | 'hours' | 'status' | 'auditNote' | 'editedByAdmin'>>,
+  ): Promise<void> {
+    if (USE_MOCKS) {
+      const current = mockDb.timeLogs.find((item) => item.id === id);
+      if (!current) throw new Error('Time log not found');
+      Object.assign(current, payload);
+      return;
+    }
+
+    const updatePayload: Record<string, unknown> = {};
+    if (payload.startTime !== undefined) updatePayload.start_time = payload.startTime;
+    if (payload.endTime !== undefined) updatePayload.end_time = payload.endTime;
+    if (payload.hours !== undefined) updatePayload.hours = payload.hours;
+    if (payload.status !== undefined) updatePayload.status = payload.status;
+    if (payload.auditNote !== undefined) updatePayload.audit_note = payload.auditNote ?? null;
+    if (payload.editedByAdmin !== undefined) updatePayload.edited_by_admin = payload.editedByAdmin;
+    if (Object.keys(updatePayload).length === 0) return;
+
+    const { error } = await supabase.from('time_logs').update(updatePayload).eq('id', id);
+    ensureNoSupabaseError(error);
+  },
+  async batchApproveTimeLogs(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    if (USE_MOCKS) {
+      mockDb.timeLogs = mockDb.timeLogs.map((item) =>
+        ids.includes(item.id) ? { ...item, status: 'approved' } : item,
+      );
+      return;
+    }
+    const { error } = await supabase
+      .from('time_logs')
+      .update({ status: 'approved' })
+      .in('id', ids);
     ensureNoSupabaseError(error);
   },
   async addAttendance(payload: AttendanceRecord): Promise<AttendanceRecord> {

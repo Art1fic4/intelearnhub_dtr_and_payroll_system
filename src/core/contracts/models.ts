@@ -51,6 +51,13 @@ export interface TimeLog {
   id: string;
   date: string;
   time: string;
+  startTime: string;
+  endTime: string;
+  name: string;
+  role: 'Faculty' | 'Student';
+  subjectCode: string;
+  subjectDescription: string;
+  gradeLevel: string;
   facultyId: string;
   facultyName: string;
   subject: string;
@@ -60,6 +67,9 @@ export interface TimeLog {
   isOvertime: boolean;
   hasTOR: boolean;
   hasDiploma: boolean;
+  status: 'pending' | 'approved' | 'rejected';
+  auditNote?: string;
+  editedByAdmin?: boolean;
   periodStart?: string;
   periodEnd?: string;
   periodLabel?: string;

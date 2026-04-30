@@ -52,6 +52,13 @@ create table if not exists public.time_logs (
   id text primary key,
   date date not null,
   time text not null,
+  start_time text,
+  end_time text,
+  name text,
+  role text check (role in ('Faculty', 'Student')),
+  subject_code text,
+  subject_description text,
+  grade_level text,
   faculty_id text not null references public.faculty(id) on update cascade on delete restrict,
   faculty_name text not null,
   subject text not null,
@@ -61,6 +68,9 @@ create table if not exists public.time_logs (
   is_overtime boolean not null default false,
   has_tor boolean not null default false,
   has_diploma boolean not null default false,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  audit_note text,
+  edited_by_admin boolean not null default false,
   period_start date,
   period_end date,
   period_label text,
@@ -94,46 +104,47 @@ alter table public.time_logs enable row level security;
 alter table public.attendance_records enable row level security;
 
 drop policy if exists "Allow anon read faculty" on public.faculty;
-create policy "Allow anon read faculty" on public.faculty for select to anon using (true);
+create policy "Allow anon read faculty" on public.faculty for select to anon, authenticated using (true);
 drop policy if exists "Allow anon write faculty" on public.faculty;
-create policy "Allow anon write faculty" on public.faculty for insert to anon with check (true);
+create policy "Allow anon write faculty" on public.faculty for insert to anon, authenticated with check (true);
 drop policy if exists "Allow anon update faculty" on public.faculty;
-create policy "Allow anon update faculty" on public.faculty for update to anon using (true) with check (true);
+create policy "Allow anon update faculty" on public.faculty for update to anon, authenticated using (true) with check (true);
 drop policy if exists "Allow anon delete faculty" on public.faculty;
-create policy "Allow anon delete faculty" on public.faculty for delete to anon using (true);
+create policy "Allow anon delete faculty" on public.faculty for delete to anon, authenticated using (true);
 
 drop policy if exists "Allow anon read students" on public.students;
-create policy "Allow anon read students" on public.students for select to anon using (true);
+create policy "Allow anon read students" on public.students for select to anon, authenticated using (true);
 drop policy if exists "Allow anon write students" on public.students;
-create policy "Allow anon write students" on public.students for insert to anon with check (true);
+create policy "Allow anon write students" on public.students for insert to anon, authenticated with check (true);
 drop policy if exists "Allow anon update students" on public.students;
-create policy "Allow anon update students" on public.students for update to anon using (true) with check (true);
+create policy "Allow anon update students" on public.students for update to anon, authenticated using (true) with check (true);
 drop policy if exists "Allow anon delete students" on public.students;
-create policy "Allow anon delete students" on public.students for delete to anon using (true);
+create policy "Allow anon delete students" on public.students for delete to anon, authenticated using (true);
 
 drop policy if exists "Allow anon read subjects" on public.subjects;
-create policy "Allow anon read subjects" on public.subjects for select to anon using (true);
+create policy "Allow anon read subjects" on public.subjects for select to anon, authenticated using (true);
 drop policy if exists "Allow anon write subjects" on public.subjects;
-create policy "Allow anon write subjects" on public.subjects for insert to anon with check (true);
+create policy "Allow anon write subjects" on public.subjects for insert to anon, authenticated with check (true);
 drop policy if exists "Allow anon update subjects" on public.subjects;
-create policy "Allow anon update subjects" on public.subjects for update to anon using (true) with check (true);
+create policy "Allow anon update subjects" on public.subjects for update to anon, authenticated using (true) with check (true);
 drop policy if exists "Allow anon delete subjects" on public.subjects;
-create policy "Allow anon delete subjects" on public.subjects for delete to anon using (true);
+create policy "Allow anon delete subjects" on public.subjects for delete to anon, authenticated using (true);
 
 drop policy if exists "Allow anon read time_logs" on public.time_logs;
-create policy "Allow anon read time_logs" on public.time_logs for select to anon using (true);
+create policy "Allow anon read time_logs" on public.time_logs for select to anon, authenticated using (true);
 drop policy if exists "Allow anon write time_logs" on public.time_logs;
-create policy "Allow anon write time_logs" on public.time_logs for insert to anon with check (true);
+create policy "Allow anon write time_logs" on public.time_logs for insert to anon, authenticated with check (true);
 drop policy if exists "Allow anon update time_logs" on public.time_logs;
-create policy "Allow anon update time_logs" on public.time_logs for update to anon using (true) with check (true);
+create policy "Allow anon update time_logs" on public.time_logs for update to anon, authenticated using (true) with check (true);
 drop policy if exists "Allow anon delete time_logs" on public.time_logs;
-create policy "Allow anon delete time_logs" on public.time_logs for delete to anon using (true);
+create policy "Allow anon delete time_logs" on public.time_logs for delete to anon, authenticated using (true);
 
 drop policy if exists "Allow anon read attendance_records" on public.attendance_records;
-create policy "Allow anon read attendance_records" on public.attendance_records for select to anon using (true);
+create policy "Allow anon read attendance_records" on public.attendance_records for select to anon, authenticated using (true);
 drop policy if exists "Allow anon write attendance_records" on public.attendance_records;
-create policy "Allow anon write attendance_records" on public.attendance_records for insert to anon with check (true);
+create policy "Allow anon write attendance_records" on public.attendance_records for insert to anon, authenticated with check (true);
 drop policy if exists "Allow anon update attendance_records" on public.attendance_records;
-create policy "Allow anon update attendance_records" on public.attendance_records for update to anon using (true) with check (true);
+create policy "Allow anon update attendance_records" on public.attendance_records for update to anon, authenticated using (true) with check (true);
 drop policy if exists "Allow anon delete attendance_records" on public.attendance_records;
-create policy "Allow anon delete attendance_records" on public.attendance_records for delete to anon using (true);
+create policy "Allow anon delete attendance_records" on public.attendance_records for delete to anon, authenticated using (true);
+  

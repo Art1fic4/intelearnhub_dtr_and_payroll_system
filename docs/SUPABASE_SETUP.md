@@ -59,7 +59,7 @@ where id = 'FA-TEST-001';
 - `subjects` and `days` are stored as Postgres text arrays.
 - `profile_picture` and `documents` are stored as JSONB.
 - `subjects.faculty_id` is nullable so subjects can be created before assigning faculty.
-- Current RLS policies allow `anon` read/insert/update/delete for quick integration testing. Tighten these before production.
+- Current RLS policies allow both `anon` and `authenticated` read/insert/update/delete for quick integration testing. Tighten these before production.
 
 ## If you already created tables before this update
 
@@ -78,4 +78,15 @@ alter table public.subjects
   references public.faculty(id)
   on update cascade
   on delete set null;
+
+-- If student update fails with "Check Supabase RLS update policy",
+-- make sure authenticated sessions are also allowed by RLS:
+drop policy if exists "Allow anon read students" on public.students;
+create policy "Allow anon read students" on public.students for select to anon, authenticated using (true);
+drop policy if exists "Allow anon write students" on public.students;
+create policy "Allow anon write students" on public.students for insert to anon, authenticated with check (true);
+drop policy if exists "Allow anon update students" on public.students;
+create policy "Allow anon update students" on public.students for update to anon, authenticated using (true) with check (true);
+drop policy if exists "Allow anon delete students" on public.students;
+create policy "Allow anon delete students" on public.students for delete to anon, authenticated using (true);
 ```

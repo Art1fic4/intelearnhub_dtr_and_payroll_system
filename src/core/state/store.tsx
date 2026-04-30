@@ -29,6 +29,11 @@ interface AppState {
   updateSubject: (id: string, subject: Partial<Subject>) => Promise<void>;
   deleteSubject: (id: string) => Promise<void>;
   addTimeLog: (log: TimeLog) => Promise<void>;
+  updateTimeLog: (
+    id: string,
+    updates: Partial<Pick<TimeLog, 'startTime' | 'endTime' | 'hours' | 'status' | 'auditNote' | 'editedByAdmin'>>,
+  ) => Promise<void>;
+  batchApproveTimeLogs: (ids: string[]) => Promise<void>;
   deleteTimeLog: (id: string) => Promise<void>;
   addAttendance: (record: AttendanceRecord) => Promise<void>;
 }
@@ -122,6 +127,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setTimeLogs((prev) => [...prev, created]);
   }, []);
 
+  const updateTimeLog = useCallback(
+    async (
+      id: string,
+      updates: Partial<Pick<TimeLog, 'startTime' | 'endTime' | 'hours' | 'status' | 'auditNote' | 'editedByAdmin'>>,
+    ) => {
+      await adminService.updateTimeLog(id, updates);
+      setTimeLogs((prev) => prev.map((item) => (item.id === id ? { ...item, ...updates } : item)));
+    },
+    [],
+  );
+
+  const batchApproveTimeLogs = useCallback(async (ids: string[]) => {
+    await adminService.batchApproveTimeLogs(ids);
+    const idSet = new Set(ids);
+    setTimeLogs((prev) => prev.map((item) => (idSet.has(item.id) ? { ...item, status: 'approved' as const } : item)));
+  }, []);
+
   const deleteTimeLog = useCallback(async (id: string) => {
     await adminService.deleteTimeLog(id);
     setTimeLogs((prev) => prev.filter((item) => item.id !== id));
@@ -159,6 +181,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateSubject,
       deleteSubject,
       addTimeLog,
+      updateTimeLog,
+      batchApproveTimeLogs,
       deleteTimeLog,
       addAttendance,
     }),
@@ -169,6 +193,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addStudent,
       addSubject,
       addTimeLog,
+      updateTimeLog,
+      batchApproveTimeLogs,
       deleteFaculty,
       deleteStudent,
       deleteSubject,
@@ -181,8 +207,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       subjects,
       timeLogs,
       updateFaculty,
+      updateTimeLog,
       updateStudent,
       updateSubject,
+      batchApproveTimeLogs,
     ],
   );
 

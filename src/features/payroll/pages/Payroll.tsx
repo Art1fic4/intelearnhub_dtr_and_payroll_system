@@ -43,6 +43,7 @@ export function Payroll() {
   const filteredLogs = useMemo(() => {
     return timeLogs.filter(
       log => log.facultyId === selectedFaculty &&
+             log.status === 'approved' &&
              (!startDate || log.date >= startDate) &&
              (!endDate || log.date <= endDate)
     ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
