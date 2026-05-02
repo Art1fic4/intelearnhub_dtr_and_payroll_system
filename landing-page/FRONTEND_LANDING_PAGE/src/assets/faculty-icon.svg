@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="facultyTitle">
+  <title id="facultyTitle">Faculty Icon</title>
+  <rect width="160" height="160" rx="32" fill="#ffffff"/>
+  <rect x="14" y="14" width="132" height="132" rx="28" fill="#f7f2de" stroke="#d4af37" stroke-width="4"/>
+  <path d="M80 39 117 56 80 73 43 56Z" fill="#0b0b0b"/>
+  <path d="M55 69v22c0 14 11 25 25 25s25-11 25-25V69l-25 11z" fill="#d4af37"/>
+  <circle cx="80" cy="90" r="11" fill="#0b0b0b"/>
+  <rect x="66" y="100" width="28" height="20" rx="10" fill="#0b0b0b"/>
+</svg>
